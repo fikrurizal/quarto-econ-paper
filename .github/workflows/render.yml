@@ -1,0 +1,99 @@
+name: render
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # required to attach the PDF to a tagged release
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          tinytex: true   # bring along TinyTeX so PDF rendering works
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.5'
+          use-public-rspm: true
+
+      - name: Cache R packages
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          # Packages used by the bundled template body (R chunks in
+          # sections/_main.qmd and sections/_appendix.qmd).
+          packages: |
+            any::knitr
+            any::rmarkdown
+            any::ggplot2
+            any::dplyr
+            any::tidyr
+            any::kableExtra
+            any::modelsummary
+            any::broom
+            any::patchwork
+            any::pdftools
+
+      - name: Render template.qmd (PDF + HTML)
+        run: quarto render template.qmd
+
+      - name: Refresh preview images from rendered PDF
+        # Keeps images/preview-*.png in sync with the actual render.
+        # On a regular push to main we commit the refreshed previews
+        # back so the README on GitHub matches the latest output.
+        run: |
+          mkdir -p images
+          Rscript -e '
+            library(pdftools)
+            specs <- list(
+              list(page = 1, name = "title"),
+              list(page = 2, name = "methods"),
+              list(page = 6, name = "appendix"),
+              list(page = 9, name = "landscape")
+            )
+            for (s in specs) {
+              pdf_convert("template.pdf", format = "png",
+                          pages = s$page, dpi = 150,
+                          filenames = paste0("images/preview-", s$name, ".png"))
+            }
+          '
+
+      - name: Commit refreshed preview images
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- images/; then
+            echo "No preview changes."
+          else
+            git add images/
+            git commit -m "ci: refresh preview images [skip ci]"
+            git push
+          fi
+
+      - name: Upload PDF as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: template-pdf
+          path: template.pdf
+          if-no-files-found: error
+
+      - name: Attach PDF to release (only on tag push)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: template.pdf
+          generate_release_notes: true

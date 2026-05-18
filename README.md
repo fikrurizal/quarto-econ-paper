@@ -35,6 +35,19 @@ save you a weekend.
   placement on appendix floats so a Notes block can't print before
   its table.
 
+## Preview
+
+A few pages from a render of `template.qmd` (the latest full PDF
+ships as an asset on every [release](https://github.com/fikrurizal/quarto-econ-paper/releases)):
+
+| Title block (AEA-style)             | Methods, with display math               |
+| ----------------------------------- | ---------------------------------------- |
+| ![Title page](images/preview-title.png) | ![Methods page](images/preview-methods.png) |
+
+| Appendix tables with notes              | Landscape wide event-study table         |
+| --------------------------------------- | ---------------------------------------- |
+| ![Appendix page](images/preview-appendix.png) | ![Landscape page](images/preview-landscape.png) |
+
 ## Install
 
 ```bash
