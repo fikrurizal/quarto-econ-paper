@@ -68,7 +68,9 @@ quarto render template-numeric.qmd  # numeric superscript affiliations
 quarto render template-lancet.qmd   # Lancet citation style
 ```
 
-All three render to both PDF and HTML.
+All three render to PDF, HTML, and DOCX. DOCX support is
+experimental (see [Word output](#word-output) below for what
+degrades vs. PDF).
 
 ## Writing a paper with it
 
@@ -96,6 +98,7 @@ format:
   econ-paper-pdf:
     keep-tex: true
   econ-paper-html: default
+  econ-paper-docx: default   # optional, experimental
 ```
 
 In your sections, drop a placeholder div wherever each bib should
@@ -195,6 +198,33 @@ mistakes (mismatched topic names, missing placeholder divs).
 | `partials/before-body-numeric.tex`                           | Numeric superscript title block                       |
 | `partials/_include-in-header.tex`                            | LaTeX packages, caption/bib spacing, float placement  |
 | `csl/the-lancet.csl`                                         | Lancet CSL                                            |
+
+## Word output
+
+Adding `econ-paper-docx: default` to your `format:` block produces
+a Word document with bibliographies, appendix numbering, and
+landscape rotation working out of the box. The pieces that are
+LaTeX-specific degrade:
+
+- **Title block**: the AEA-style `\thanks` arrangement is LaTeX-
+  only. Word uses Quarto's default docx title (centered title +
+  author names; affiliations are dropped).
+- **Tblnotes styling**: `.tblnotes` paragraphs are tagged with the
+  custom paragraph style `Table Notes`. They render as normal
+  paragraphs unless you supply a `reference-doc:` with that style
+  defined (smaller font, italics, hanging indent).
+- **Table styling**: tables come out as native Word tables (via
+  `flextable` for `modelsummary` and pipe-format markdown for
+  `kable`). The kableExtra LaTeX styling (`HOLD_position`,
+  `font_size = 9`) does not apply.
+- **Landscape**: `::: {.landscape}` rotates just that section via
+  raw OOXML section breaks; the rest of the document stays
+  portrait.
+
+If you mix output formats, your R chunks need to dispatch on
+`knitr::pandoc_to()` (or `knitr::is_latex_output()`). The sample
+chunks in `sections/_main.qmd` show the pattern (`tbl_fmt`,
+`ms_out`, `style_tbl()`).
 
 ## Known quirks
 

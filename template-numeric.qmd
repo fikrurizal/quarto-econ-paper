@@ -40,6 +40,7 @@ format:
     template-partials:
       - _extensions/fikrurizal/econ-paper/partials/before-body-numeric.tex
   econ-paper-html: default
+  econ-paper-docx: default
 ---
 
 {{< include sections/_main.qmd >}}

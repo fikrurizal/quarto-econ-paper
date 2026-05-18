@@ -33,6 +33,7 @@ format:
   econ-paper-pdf:
     keep-tex: true
   econ-paper-html: default
+  econ-paper-docx: default
 ---
 
 {{< include sections/_main.qmd >}}

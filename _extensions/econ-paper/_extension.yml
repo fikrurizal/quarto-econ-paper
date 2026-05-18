@@ -15,6 +15,7 @@ contributes:
       # div to produce per-topic bibliographies.
       filters:
         - filters/inject-bib.lua
+        - filters/docx-affiliations.lua
         - filters/div-to-env.lua
         - filters/supplementary.lua
         - filters/multibib.lua
@@ -78,3 +79,17 @@ contributes:
       number-sections: true
       toc: true
       theme: cosmo
+
+    docx:
+      # Experimental. Most LaTeX-only pieces have docx equivalents
+      # via reference.docx + filters: bibliographies split correctly
+      # (multibib is format-agnostic), appendix counters work via
+      # native crossref, `.landscape` rotates via OOXML section
+      # breaks (div-to-env.lua), `.tblnotes` paragraphs are tagged
+      # with custom-style "TableNotes" which the bundled reference
+      # doc defines as Times New Roman 10pt single-spaced justified.
+      # Out of scope: AEA `\thanks` title block (docx uses Quarto's
+      # default Title/Author rendering).
+      reference-doc: reference/econ-paper-reference.docx
+      number-sections: true
+      toc: false

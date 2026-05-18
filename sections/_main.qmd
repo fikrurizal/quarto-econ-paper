@@ -3,7 +3,7 @@
 knitr::opts_chunk$set(
   echo = FALSE, message = FALSE, warning = FALSE,
   fig.align = "center", fig.width = 5.5, fig.height = 3.5,
-  dpi = 300, dev = "pdf"
+  dpi = 300, dev = if (knitr::is_latex_output()) "pdf" else "png"
 )
 library(ggplot2)
 library(dplyr)
@@ -11,6 +11,97 @@ library(knitr)
 library(kableExtra)
 library(modelsummary)
 library(broom)
+
+# Format-aware helpers so the same chunk works for PDF, HTML, and DOCX.
+# - is_docx:   true when knitting to docx
+# - ms_out:    modelsummary's `output=` argument (flextable in docx
+#              produces a native Word table; kableExtra is HTML-or-LaTeX)
+# - style_tbl: applies kableExtra LaTeX styling for LaTeX; for docx,
+#              applies flextable styling (Times 10pt + autofit)
+# - tabulate:  build a table from a data frame, format-aware. Use this
+#              instead of kable() in chunks that need to render to docx
+#              cleanly — pure kable+kableExtra produces a docx table
+#              wrapped in the borderless pandoc "Table" style with no
+#              visible cell borders.
+.to     <- knitr::pandoc_to()
+is_docx <- !is.null(.to) && .to == "docx"
+ms_out  <- if (knitr::is_latex_output()) "kableExtra" else if (is_docx) "flextable" else "kableExtra"
+
+if (is_docx) {
+  # All flextables (modelsummary output + tabulate() output) inherit
+  # Times 10pt to match the manuscript body style.
+  flextable::set_flextable_defaults(
+    font.family = "Times New Roman",
+    font.size = 10,
+    padding.top = 1,
+    padding.bottom = 1,
+    padding.left = 4,
+    padding.right = 4
+  )
+}
+
+style_tbl <- function(x) {
+  if (knitr::is_latex_output()) {
+    kableExtra::kable_styling(
+      x, latex_options = "HOLD_position",
+      position = "center", font_size = 9
+    )
+  } else if (is_docx && inherits(x, "flextable")) {
+    x |>
+      flextable::set_table_properties(layout = "autofit", width = 1) |>
+      flextable::font(fontname = "Times New Roman", part = "all") |>
+      flextable::fontsize(size = 10, part = "all")
+  } else {
+    x
+  }
+}
+
+# Format-aware table builder. Use this instead of kable() in chunks
+# that need docx output.
+tabulate <- function(df, align = NULL, header_above = NULL,
+                     font_size = 9, escape = TRUE) {
+  if (knitr::is_latex_output()) {
+    k <- kable(df, format = "latex", booktabs = TRUE, linesep = "",
+               align = align, escape = escape) |>
+      kableExtra::kable_styling(
+        latex_options = "HOLD_position",
+        position = "center", font_size = font_size
+      )
+    if (!is.null(header_above)) {
+      k <- kableExtra::add_header_above(k, header_above)
+    }
+    k
+  } else if (is_docx) {
+    ft <- flextable::flextable(df) |>
+      flextable::set_table_properties(layout = "autofit", width = 1) |>
+      flextable::font(fontname = "Times New Roman", part = "all") |>
+      flextable::fontsize(size = 10, part = "all")
+    if (!is.null(align)) {
+      align_map <- c(l = "left", r = "right", c = "center")
+      for (j in seq_along(align)) {
+        a <- align_map[align[j]]
+        if (!is.na(a)) {
+          ft <- flextable::align(ft, j = j, align = a, part = "all")
+        }
+      }
+    }
+    if (!is.null(header_above)) {
+      labels <- names(header_above)
+      counts <- as.integer(header_above)
+      ft <- flextable::add_header_row(
+        ft, values = labels, colwidths = counts, top = TRUE
+      )
+    }
+    ft
+  } else {
+    k <- kable(df, format = "html", align = align, escape = escape) |>
+      kableExtra::kable_styling()
+    if (!is.null(header_above)) {
+      k <- kableExtra::add_header_above(k, header_above)
+    }
+    k
+  }
+}
 
 # Reproducible toy data used throughout the demo so figures/tables
 # are computed (not placeholders).
@@ -121,9 +212,9 @@ modelsummary(
   coef_map = c("treat" = "Policy X", "age" = "Age", "educ" = "Education"),
   gof_omit = "AIC|BIC|Log|F|RMSE|R2 Adj.",
   fmt = 3, stars = c("*" = 0.1, "**" = 0.05, "***" = 0.01),
-  output = "kableExtra"
+  output = ms_out
 ) |>
-  kable_styling(latex_options = "HOLD_position", position = "center", font_size = 9)
+  style_tbl()
 ```
 
 The headline point estimate of

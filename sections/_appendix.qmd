@@ -19,9 +19,7 @@ demo |>
     names_to = c("Variable", ".value"),
     names_sep = "_") |>
   mutate(across(c(Mean, SD, Min, Max), \(x) round(x, 1))) |>
-  kable(format = "latex", booktabs = TRUE, linesep = "",
-        align = c("l", rep("r", 5))) |>
-  kable_styling(latex_options = "HOLD_position", position = "center", font_size = 9)
+  tabulate(align = c("l", rep("r", 5)))
 ```
 
 Summary statistics for the analysis sample.
@@ -48,9 +46,7 @@ demo |>
   mutate(treat = if_else(treat == 1, "Treated", "Control")) |>
   rename(Group = treat) |>
   mutate(across(c(Income, Age, Education), \(x) round(x, 1))) |>
-  kable(format = "latex", booktabs = TRUE, linesep = "",
-        align = c("l", rep("r", 4))) |>
-  kable_styling(latex_options = "HOLD_position", position = "center", font_size = 9)
+  tabulate(align = c("l", rep("r", 4)))
 ```
 
 Balance check across treatment and control groups.
@@ -141,9 +137,9 @@ modelsummary(
   coef_map = c("treat" = "Policy X", "age" = "Age", "educ" = "Education"),
   gof_omit = "AIC|BIC|Log|F|RMSE|R2 Adj.",
   fmt = 3, stars = c("*" = 0.1, "**" = 0.05, "***" = 0.01),
-  output = "kableExtra"
+  output = ms_out
 ) |>
-  kable_styling(latex_options = "HOLD_position", position = "center", font_size = 9)
+  style_tbl()
 ```
 
 Robustness of the main estimate to alternative specifications.
@@ -168,9 +164,9 @@ modelsummary(
   coef_map = c("treat" = "Policy X"),
   gof_omit = "AIC|BIC|Log|F|RMSE|R2 Adj.",
   fmt = 3, stars = c("*" = 0.1, "**" = 0.05, "***" = 0.01),
-  output = "kableExtra"
+  output = ms_out
 ) |>
-  kable_styling(latex_options = "HOLD_position", position = "center", font_size = 9)
+  style_tbl()
 ```
 
 Alternative identification strategies.
@@ -223,10 +219,9 @@ event_tab |>
     `Weighted`           = fmt_pair(est_w,    se_w),
     `Log-income`         = fmt_pair(est_l,    se_l)
   ) |>
-  kable(format = "latex", booktabs = TRUE, escape = FALSE, linesep = "",
-        align = c("l", rep("c", 5))) |>
-  kable_styling(latex_options = "HOLD_position", position = "center", font_size = 9) |>
-  add_header_above(c(" " = 1, "Specification" = 5))
+  tabulate(align = c("l", rep("c", 5)),
+           header_above = c(" " = 1, "Specification" = 5),
+           escape = FALSE)
 ```
 
 Event-study coefficients for relative periods $k \in \{-3, \ldots, +3\}$.

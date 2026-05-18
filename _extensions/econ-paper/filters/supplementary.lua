@@ -24,4 +24,13 @@ function Header(el)
     return pandoc.Header(2, el.content,
       pandoc.Attr(el.identifier, {"supplementary", "unnumbered"}, el.attributes))
   end
+
+  if quarto.doc.is_format("docx") then
+    -- Uppercase the heading text and keep it as a level-1 header so it
+    -- inherits "Heading 1" style. Marked unnumbered so Quarto's
+    -- number-sections doesn't prepend "1." to "APPENDIX".
+    local title_text = pandoc.text.upper(pandoc.utils.stringify(el.content))
+    return pandoc.Header(1, {pandoc.Str(title_text)},
+      pandoc.Attr(el.identifier, {"supplementary", "unnumbered"}, el.attributes))
+  end
 end
