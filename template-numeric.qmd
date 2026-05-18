@@ -1,0 +1,49 @@
+---
+# VARIANT — numeric superscript affiliations. Same body as
+# template.qmd; differs only in the title-block partial.
+title: "Your paper title here"
+title-footnote: |
+  Footnote attached to the title.
+author:
+  - name: First Author
+    acknowledgements: |
+      Corresponding author. Per-author thanks.
+    affiliations:
+      - ref: aff1
+      - ref: aff2
+  - name: Second Author
+    affiliations:
+      - ref: aff2
+affiliations:
+  - id: aff1
+    name: University X
+    department: Department of Economics
+  - id: aff2
+    name: University Y
+    department: Department of Finance
+abstract: |
+  Your abstract.
+keywords:
+  - keyword1
+  - keyword2
+date: last-modified
+
+multibib-bibliography:
+  main: refs-main.bib
+  appendix: refs-appendix.bib
+
+format:
+  econ-paper-pdf:
+    keep-tex: true
+    # Swap the default AEA-style title block for a numeric-superscript
+    # one (First Author^{1,2}  Second Author^{2} + numbered list).
+    template-partials:
+      - _extensions/fikrurizal/econ-paper/partials/before-body-numeric.tex
+  econ-paper-html: default
+---
+
+{{< include sections/_main.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include sections/_appendix.qmd >}}

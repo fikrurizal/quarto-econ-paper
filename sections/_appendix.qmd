@@ -1,0 +1,285 @@
+# Appendix {.supplementary}
+
+## Appendix A. Data curation {#sec-app-a .unnumbered}
+
+This appendix describes the data construction in detail.
+@cameron2015 provide guidance on standard errors that we rely on
+throughout. Summary statistics are reported in @apxatbl-summary and a
+coverage map in @apxafig-coverage.
+
+::: {#apxatbl-summary}
+
+```{r}
+demo |>
+  select(Income = income, Age = age, Education = educ) |>
+  summarise(across(everything(),
+    list(Mean = mean, SD = sd, Min = min, Max = max,
+         N = ~ sum(!is.na(.x))))) |>
+  tidyr::pivot_longer(everything(),
+    names_to = c("Variable", ".value"),
+    names_sep = "_") |>
+  mutate(across(c(Mean, SD, Min, Max), \(x) round(x, 1))) |>
+  kable(format = "latex", booktabs = TRUE, linesep = "",
+        align = c("l", rep("r", 5))) |>
+  kable_styling(latex_options = "HOLD_position", position = "center", font_size = 9)
+```
+
+Summary statistics for the analysis sample.
+
+:::
+
+::: {.tblnotes}
+*Notes:* Author calculations from the simulated XYZ Household Survey
+panel constructed in the `setup` chunk. Income is reported in 2020
+USD. The analysis sample comprises
+`r format(nrow(demo), big.mark = ",")` observations across
+`r length(unique(demo$state))` states.
+:::
+
+A second appendix table reports balance across treatment status:
+
+::: {#apxatbl-balance}
+
+```{r}
+demo |>
+  group_by(treat) |>
+  summarise(Income = mean(income), Age = mean(age),
+            Education = mean(educ), N = n()) |>
+  mutate(treat = if_else(treat == 1, "Treated", "Control")) |>
+  rename(Group = treat) |>
+  mutate(across(c(Income, Age, Education), \(x) round(x, 1))) |>
+  kable(format = "latex", booktabs = TRUE, linesep = "",
+        align = c("l", rep("r", 4))) |>
+  kable_styling(latex_options = "HOLD_position", position = "center", font_size = 9)
+```
+
+Balance check across treatment and control groups.
+
+:::
+
+::: {.tblnotes}
+*Notes:* Group means by treatment status, unweighted. Differences
+across groups are small in magnitude but not jointly zero.
+:::
+
+The coverage of the survey across states is summarized in
+@apxafig-coverage. We also display the joint distribution of age and
+income as a two-panel figure (@apxafig-joint), where panel (a) shows
+the age distribution and panel (b) shows the joint density.
+
+::: {#apxafig-coverage}
+
+```{r}
+#| fig-width: 5
+#| fig-height: 3
+demo |>
+  count(state) |>
+  ggplot(aes(x = reorder(state, n), y = n)) +
+  geom_col(fill = "#4a7ab3", width = 0.7) +
+  geom_text(aes(label = n), hjust = -0.2, size = 2.5) +
+  coord_flip(clip = "off") +
+  labs(x = "State", y = "Sample observations") +
+  expand_limits(y = max(table(demo$state)) * 1.1) +
+  theme_minimal(base_size = 9)
+```
+
+Sample coverage by state.
+
+:::
+
+::: {#apxafig-joint}
+
+```{r}
+#| fig-width: 6
+#| fig-height: 2.6
+library(patchwork)
+p_age <- ggplot(demo, aes(x = age)) +
+  geom_histogram(bins = 25, fill = "#4a7ab3", color = "white") +
+  labs(x = "Age (years)", y = "Count", subtitle = "(a) Age distribution") +
+  theme_minimal(base_size = 8) +
+  theme(plot.subtitle = element_text(face = "bold", size = 8))
+
+p_hex <- ggplot(demo, aes(x = age, y = income)) +
+  # geom_bin2d works with base ggplot2 (no extra `hexbin` package).
+  geom_bin2d(bins = 18) +
+  scale_fill_gradient(low = "#dfe9f3", high = "#1f4e7a") +
+  labs(x = "Age (years)", y = "Income (USD)", fill = "Count",
+       subtitle = "(b) Age-income joint density") +
+  theme_minimal(base_size = 8) +
+  theme(plot.subtitle = element_text(face = "bold", size = 8),
+        legend.key.size = unit(0.3, "cm"))
+
+p_age + p_hex
+```
+
+Joint distribution of age and income — (a) marginal age, (b) joint density with income.
+
+:::
+
+::: {.tblnotes}
+*Notes:* Panel (a) shows the marginal age distribution; panel (b)
+shows a hex-binned joint density of age and income. Both panels use
+the full analysis sample.
+:::
+
+## Appendix B. Robustness {#sec-app-b .unnumbered}
+
+This appendix collects robustness exercises. The headline robustness
+table is @apxbtbl-robust; an alternative specification is reported in
+@apxbtbl-altspec, the wide event-study table appears in
+@apxbtbl-event, and a sensitivity plot is shown in
+@apxbfig-sensitivity. As in @abadie2017 we cluster at the relevant
+unit of treatment assignment.
+
+::: {#apxbtbl-robust}
+
+```{r}
+modelsummary(
+  list("Baseline" = baseline,
+       "+ Controls" = controls,
+       "+ State FE" = state_fe),
+  coef_map = c("treat" = "Policy X", "age" = "Age", "educ" = "Education"),
+  gof_omit = "AIC|BIC|Log|F|RMSE|R2 Adj.",
+  fmt = 3, stars = c("*" = 0.1, "**" = 0.05, "***" = 0.01),
+  output = "kableExtra"
+) |>
+  kable_styling(latex_options = "HOLD_position", position = "center", font_size = 9)
+```
+
+Robustness of the main estimate to alternative specifications.
+
+:::
+
+::: {.tblnotes}
+*Notes:* Standard errors clustered at the state level in parentheses.
+Controls include age and education. State FE denotes state-level
+fixed effects (10 states). *** $p<0.01$, ** $p<0.05$, * $p<0.1$.
+:::
+
+::: {#apxbtbl-altspec}
+
+```{r}
+# Toy "IV" and "matching" — for demo purposes
+iv_fit    <- lm(income ~ treat + age + educ, data = demo)  # placeholder
+match_fit <- lm(income ~ treat + age + educ, data = demo |> slice_sample(n = 800))
+
+modelsummary(
+  list("IV" = iv_fit, "Matching" = match_fit),
+  coef_map = c("treat" = "Policy X"),
+  gof_omit = "AIC|BIC|Log|F|RMSE|R2 Adj.",
+  fmt = 3, stars = c("*" = 0.1, "**" = 0.05, "***" = 0.01),
+  output = "kableExtra"
+) |>
+  kable_styling(latex_options = "HOLD_position", position = "center", font_size = 9)
+```
+
+Alternative identification strategies.
+
+:::
+
+::: {.tblnotes}
+*Notes:* IV refers to an instrumental-variables design (placeholder
+specification); Matching restricts the sample to a propensity-score
+matched subset. Both report the same outcome equation as the
+baseline.
+:::
+
+A wide event-study table sits awkwardly in portrait orientation, so
+we rotate it. @apxbtbl-event shows the dynamic coefficients
+$\hat\theta_k$ for $k \in \{-3, ..., +3\}$ (with $k=-1$ omitted as
+the reference period).
+
+::: {.landscape}
+
+::: {#apxbtbl-event}
+
+```{r}
+# Build a wide synthetic event-study table with state-by-period FE columns
+event_tab <- tibble(
+  k = c(-3, -2, -1, 0, 1, 2, 3),
+  est_base = c(-0.012, 0.008, NA_real_, 0.118, 0.124, 0.131, 0.129),
+  se_base  = c(0.041, 0.038, NA_real_, 0.040, 0.041, 0.043, 0.046),
+  est_ctrl = c(-0.010, 0.005, NA_real_, 0.115, 0.121, 0.128, 0.126),
+  se_ctrl  = c(0.039, 0.036, NA_real_, 0.038, 0.039, 0.041, 0.044),
+  est_fe   = c(-0.008, 0.004, NA_real_, 0.113, 0.119, 0.126, 0.124),
+  se_fe    = c(0.044, 0.041, NA_real_, 0.045, 0.046, 0.048, 0.050),
+  est_w    = c(-0.014, 0.007, NA_real_, 0.116, 0.122, 0.130, 0.128),
+  se_w     = c(0.040, 0.037, NA_real_, 0.039, 0.040, 0.042, 0.045),
+  est_l    = c(-0.011, 0.009, NA_real_, 0.119, 0.125, 0.132, 0.130),
+  se_l     = c(0.042, 0.039, NA_real_, 0.041, 0.042, 0.044, 0.047)
+)
+
+fmt_pair <- function(est, se) {
+  ifelse(is.na(est), "(omitted)",
+         sprintf("%.3f (%.3f)", est, se))
+}
+
+event_tab |>
+  transmute(
+    `Relative period ($k$)` = paste0("$k = ", k, "$"),
+    Baseline             = fmt_pair(est_base, se_base),
+    `+ Controls`         = fmt_pair(est_ctrl, se_ctrl),
+    `+ State FE`         = fmt_pair(est_fe,   se_fe),
+    `Weighted`           = fmt_pair(est_w,    se_w),
+    `Log-income`         = fmt_pair(est_l,    se_l)
+  ) |>
+  kable(format = "latex", booktabs = TRUE, escape = FALSE, linesep = "",
+        align = c("l", rep("c", 5))) |>
+  kable_styling(latex_options = "HOLD_position", position = "center", font_size = 9) |>
+  add_header_above(c(" " = 1, "Specification" = 5))
+```
+
+Event-study coefficients for relative periods $k \in \{-3, \ldots, +3\}$.
+
+:::
+
+::: {.tblnotes}
+*Notes:* Each cell reports the estimated $\hat\theta_k$ from
+@eq-baseline with standard errors in parentheses. $k=-1$ is omitted
+as the reference period. Weighted uses sampling weights;
+Log-income uses $\log(1+Y)$ as the dependent variable. Sample as in
+@apxatbl-summary.
+:::
+
+:::
+
+A coefficient plot of the dynamic estimates is shown in
+@apxbfig-sensitivity.
+
+::: {#apxbfig-sensitivity}
+
+```{r}
+#| fig-width: 5
+#| fig-height: 3
+event_tab |>
+  filter(!is.na(est_base)) |>
+  mutate(low = est_base - 1.96 * se_base,
+         hi  = est_base + 1.96 * se_base) |>
+  ggplot(aes(x = k, y = est_base)) +
+  geom_hline(yintercept = 0, color = "grey60", linewidth = 0.3) +
+  geom_vline(xintercept = -0.5, color = "grey60", linewidth = 0.3, linetype = 2) +
+  geom_errorbar(aes(ymin = low, ymax = hi), width = 0.15, color = "#1f4e7a") +
+  geom_point(size = 1.5, color = "#1f4e7a") +
+  scale_x_continuous(breaks = -3:3) +
+  labs(x = "Relative period (k)", y = expression(hat(theta)[k])) +
+  theme_minimal(base_size = 9)
+```
+
+Event-study coefficients, baseline specification.
+
+:::
+
+::: {.tblnotes}
+*Notes:* Markers report $\hat\theta_k$; whiskers denote 95 percent
+confidence intervals constructed from state-clustered standard
+errors. Dashed line marks the omitted reference period ($k=-1$).
+:::
+
+```{=latex}
+\FloatBarrier
+```
+
+## Appendix References {.unnumbered}
+
+::: {#refs-appendix}
+:::

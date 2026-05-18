@@ -1,0 +1,47 @@
+% AEA-style title block (default). For each author, the name is
+% followed by every affiliation on its own line. Vendored from the
+% hchulkim/econ-paper-template aea extension so this extension is
+% self-contained.
+%
+% To switch to numeric superscript affiliations (Fikru Rizal^{1,2}, ...
+% with a deduplicated affiliation list), set
+%   template-partials: [before-body-numeric.tex]
+% in the document YAML — see template-numeric.qmd.
+
+\def\spacingset#1{\renewcommand{\baselinestretch}%
+{#1}\small\normalsize} \spacingset{1}
+
+$if(date)$
+\date{$if(articleurl)$\href{$articleurl$}{Link to Latest version}\\ \vspace{1em} $endif$ Last updated $date$}
+$endif$
+
+\title{$title$$if(title-footnote)$\thanks{$title-footnote$}$endif$}
+\author{
+$if(author-format)$
+$for(by-author)$
+$it.name.literal$$if(it.acknowledgements)$\thanks{$it.acknowledgements$}$endif$\\
+$for(it.affiliations)$$if(it.department)$$it.department$$if(it.name)$, $endif$$endif$$if(it.name)$$it.name$$endif$$if(it.department)$\\$elseif(it.name)$\\$endif$
+$endfor$$sep$\and $endfor$
+$else$
+$for(by-author)$
+$it.name.literal$$if(it.acknowledgements)$\thanks{$it.acknowledgements$}$endif$\\
+$for(it.affiliations)$$if(it.department)$$it.department$$if(it.name)$, $endif$$endif$$if(it.name)$$it.name$$endif$$if(it.department)$\\$elseif(it.name)$\\$endif$
+$endfor$$sep$\\$endfor$
+$endif$}
+\maketitle
+
+\bigskip
+\bigskip
+\begin{abstract}
+$abstract$
+\end{abstract}
+
+\bigskip
+$if(keywords)$
+\noindent%
+{\it Keywords:} $for(keywords)$$it$$sep$, $endfor$
+\vfill
+$endif$
+
+\newpage
+\spacingset{1.2} % DON'T change the spacing!

@@ -1,0 +1,42 @@
+---
+title: "Your paper title here"
+title-footnote: |
+  Footnote attached to the title (acknowledgements, funding sources,
+  etc.). Remove this key if you don't want a title footnote.
+author-format: horizontal
+author:
+  - name: First Author
+    acknowledgements: |
+      Corresponding author. Per-author thanks (email, funding).
+    affiliations:
+      - name: University X
+        department: Department of Economics
+  - name: Second Author
+    affiliations:
+      - name: University Y
+abstract: |
+  Your abstract.
+keywords:
+  - keyword1
+  - keyword2
+date: last-modified
+
+# multibib needs the bibliography as a topic-name → file map. The
+# extension's inject-bib.lua filter rewrites this into the standard
+# `bibliography:` MetaMap (Quarto's YAML schema refuses a map there).
+# Topic names must match the `#refs-<name>` divs in sections/.
+multibib-bibliography:
+  main: refs-main.bib
+  appendix: refs-appendix.bib
+
+format:
+  econ-paper-pdf:
+    keep-tex: true
+  econ-paper-html: default
+---
+
+{{< include sections/_main.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include sections/_appendix.qmd >}}

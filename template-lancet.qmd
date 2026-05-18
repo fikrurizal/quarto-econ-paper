@@ -1,0 +1,44 @@
+---
+# VARIANT — Lancet (medical-journal) style citations: numeric
+# superscripts in the text, references listed in order of first
+# appearance, numbered separately within each multibib bib.
+title: "Your paper title here"
+title-footnote: |
+  Footnote attached to the title.
+author-format: horizontal
+author:
+  - name: First Author
+    acknowledgements: |
+      Corresponding author. Per-author thanks.
+    affiliations:
+      - name: University X
+        department: Department of Economics
+  - name: Second Author
+    affiliations:
+      - name: University Y
+abstract: |
+  Your abstract.
+keywords:
+  - keyword1
+  - keyword2
+date: last-modified
+
+# The bundled the-lancet.csl is from citation-style-language/styles
+# (CC BY-SA 3.0).
+csl: _extensions/fikrurizal/econ-paper/csl/the-lancet.csl
+
+multibib-bibliography:
+  main: refs-main.bib
+  appendix: refs-appendix.bib
+
+format:
+  econ-paper-pdf:
+    keep-tex: true
+  econ-paper-html: default
+---
+
+{{< include sections/_main.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include sections/_appendix.qmd >}}

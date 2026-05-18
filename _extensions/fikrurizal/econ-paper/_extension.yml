@@ -1,0 +1,80 @@
+title: econ-paper
+author: Fikru Rizal
+version: 0.1.0
+quarto-required: ">=1.6.0"
+
+contributes:
+  formats:
+    common:
+      # Filters run in order: inject-bib sets a bibliography MetaMap
+      # (Quarto's YAML schema refuses `bibliography:` as a map, so we
+      # build it in Lua); div-to-env wraps `.tblnotes` / `.landscape`
+      # divs in matching LaTeX envs; supplementary turns `# Foo
+      # {.supplementary}` into a centered uppercase divider in PDF and
+      # an h2 in HTML; multibib then runs citeproc once per `#refs-*`
+      # div to produce per-topic bibliographies.
+      filters:
+        - filters/inject-bib.lua
+        - filters/div-to-env.lua
+        - filters/supplementary.lua
+        - filters/multibib.lua
+
+      # multibib runs citeproc itself; disabling Quarto's own citeproc
+      # pass prevents double-rendering.
+      cite-method: citeproc
+      citeproc: false
+
+      # Custom crossref kinds give appendices independent counters:
+      # Table A1, Table A2, ..., Table B1, ..., Figure A1, Figure B1.
+      crossref:
+        custom:
+          - kind: float
+            key: apxatbl
+            reference-prefix: Table A
+            latex-env: apxatbl
+            space-before-numbering: false
+            caption-location: top
+            latex-list-of-description: Appendix A Table
+          - kind: float
+            key: apxbtbl
+            reference-prefix: Table B
+            latex-env: apxbtbl
+            space-before-numbering: false
+            caption-location: top
+            latex-list-of-description: Appendix B Table
+          - kind: float
+            key: apxafig
+            reference-prefix: Figure A
+            latex-env: apxafig
+            space-before-numbering: false
+            latex-list-of-description: Appendix A Figure
+          - kind: float
+            key: apxbfig
+            reference-prefix: Figure B
+            latex-env: apxbfig
+            space-before-numbering: false
+            latex-list-of-description: Appendix B Figure
+
+    pdf:
+      pdf-engine: pdflatex
+      documentclass: article
+      classoption:
+        - "11pt"
+      papersize: letter
+      number-sections: true
+      indent: true
+      citecolor: cyan
+      linkcolor: cyan
+      urlcolor: cyan
+      include-in-header: partials/_include-in-header.tex
+      # Default title block is AEA-style (each author + their full
+      # affiliation stack). For numeric superscript affiliations
+      # override at the document level:
+      #   template-partials: [before-body-numeric.tex]
+      template-partials:
+        - partials/before-body.tex
+
+    html:
+      number-sections: true
+      toc: true
+      theme: cosmo

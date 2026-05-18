@@ -1,0 +1,54 @@
+% Alternative title block: each author printed with numeric
+% superscript affiliation indices (Fikru Rizal^{1,2} Jane Doe^{1}
+% John Smith^{2,3}) followed by a deduplicated, centered affiliation
+% list. Use by setting
+%   template-partials: [before-body-numeric.tex]
+% in the document YAML.
+%
+% Why not authblk? Pandoc emits `\author{Name1 \and Name2 \and Name3}`
+% in the preamble before this partial runs. authblk's \author is
+% cumulative, so its bookkeeping treats the preamble call as three
+% authors and our per-author calls would double them up to six. A
+% single plain-LaTeX \author{...} block (which the later call cleanly
+% overwrites) avoids the problem.
+
+\def\spacingset#1{\renewcommand{\baselinestretch}%
+{#1}\small\normalsize} \spacingset{1}
+
+$if(date)$
+\date{$if(articleurl)$\href{$articleurl$}{Link to Latest version}\\ \vspace{1em} $endif$ Last updated $date$}
+$endif$
+
+\title{$title$$if(title-footnote)$\thanks{$title-footnote$}$endif$}
+
+% \maketitle centers the contents of \author{...}; using \\ between
+% affiliation lines (instead of a left-aligned tabular) keeps each
+% affiliation centered under the author row.
+\author{%
+$for(by-author)$
+  $it.name.literal$\textsuperscript{$for(it.affiliations)$$it.number$$sep$,$endfor$}$if(it.acknowledgements)$\thanks{$it.acknowledgements$}$endif$$sep$ \quad
+$endfor$
+  \\[0.6em]
+  \normalsize
+$for(by-affiliation)$
+  \textsuperscript{$it.number$}\,$if(it.department)$$it.department$, $endif$$if(it.name)$$it.name$$endif$$sep$\\
+$endfor$
+}
+
+\maketitle
+
+\bigskip
+\bigskip
+\begin{abstract}
+$abstract$
+\end{abstract}
+
+\bigskip
+$if(keywords)$
+\noindent%
+{\it Keywords:} $for(keywords)$$it$$sep$, $endfor$
+\vfill
+$endif$
+
+\newpage
+\spacingset{1.2} % DON'T change the spacing!

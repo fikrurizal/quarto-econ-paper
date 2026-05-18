@@ -1,0 +1,209 @@
+```{r setup}
+#| include: false
+knitr::opts_chunk$set(
+  echo = FALSE, message = FALSE, warning = FALSE,
+  fig.align = "center", fig.width = 5.5, fig.height = 3.5,
+  dpi = 300, dev = "pdf"
+)
+library(ggplot2)
+library(dplyr)
+library(knitr)
+library(kableExtra)
+library(modelsummary)
+library(broom)
+
+# Reproducible toy data used throughout the demo so figures/tables
+# are computed (not placeholders).
+set.seed(20260518)
+n <- 1200
+demo <- tibble(
+  id      = seq_len(n),
+  state   = sample(LETTERS[1:10], n, replace = TRUE),
+  age     = round(rnorm(n, 38, 12)),
+  educ    = pmax(0, round(rnorm(n, 12, 3))),
+  treat   = rbinom(n, 1, 0.45),
+  income0 = rnorm(n, 4250, 1100)
+) |>
+  mutate(income = income0 + 380 * treat - 10 * age + 95 * educ + rnorm(n, 0, 500))
+
+baseline <- lm(income ~ treat, data = demo)
+controls <- lm(income ~ treat + age + educ, data = demo)
+state_fe <- lm(income ~ treat + age + educ + factor(state), data = demo)
+```
+
+# Introduction
+
+This manuscript demonstrates a workflow that combines two Quarto
+techniques. First, the `multibib` Lua filter splits the bibliography
+into a main list and an appendix list, following @smith2020 and
+@angrist2009. Second, Quarto 1.4+ custom cross-reference kinds let us
+number appendix tables independently — see @apxatbl-summary in
+Appendix A and @apxbtbl-robust in Appendix B for examples that are
+cross-referenced from the main text.[^pkg-note]
+
+[^pkg-note]: All tables and figures in this demo are computed from a
+simulated dataset of `r format(n, big.mark = ",")` observations
+generated in the `setup` chunk; the empirical numbers should be
+read as illustrative.
+
+A second paragraph illustrates that the document supports normal
+paragraph breaks. The economics literature has documented effects of
+policy X on outcome Y across a wide variety of settings, including
+labor markets, education, and health. Our contribution is twofold.
+First, we provide new evidence using a richer panel than has been
+available previously. Second, we develop a tractable estimator that
+nests the workhorse two-way fixed-effects design as a special case.
+
+The remainder of the paper proceeds as follows. Section 2 describes
+the data and estimation strategy. Section 3 presents the main
+results. Section 4 discusses external validity and the role of
+alternative mechanisms. Section 5 concludes. All proofs, data
+construction details, and robustness exercises are collected in the
+appendices.
+
+# Methods
+
+We rely on standard econometric tools [@wooldridge2010]. Let $Y_{it}$
+denote the outcome of interest for unit $i$ in period $t$, and let
+$D_{it} \in \{0, 1\}$ be a binary indicator for treatment exposure.
+The baseline specification is
+
+$$
+Y_{it} = \alpha_i + \lambda_t + \beta \, D_{it} + X_{it}' \gamma + \varepsilon_{it},
+$$ {#eq-baseline}
+
+where $\alpha_i$ and $\lambda_t$ are unit and time fixed effects,
+$X_{it}$ is a vector of time-varying controls, and $\varepsilon_{it}$
+is an idiosyncratic error term.[^id-fn] Under the standard
+parallel-trends assumption, the coefficient $\beta$ in @eq-baseline
+identifies the average treatment effect on the treated.
+
+[^id-fn]: We use $i$ for unit (typically individual or firm) and $t$
+for period. The notation follows @angrist2009.
+
+A more flexible variant that we report in robustness exercises
+replaces the single treatment indicator with a fully interacted set
+of relative-time dummies:
+
+\begin{align}
+Y_{it} = \alpha_i + \lambda_t + \sum_{k = -K, k \neq -1}^{K} \theta_k \, \mathbb{1}\!\{t - E_i = k\} + X_{it}' \gamma + \varepsilon_{it},
+\end{align}
+
+where $E_i$ is the treatment-adoption date for unit $i$ and $\theta_k$
+traces the dynamic path of the treatment effect. Standard errors are
+clustered at the unit level throughout, following the recommendations
+of @cameron2015 and @abadie2017 — see Appendix B for further
+discussion.
+
+Three additional comments on the estimation strategy are worth
+flagging. First, identification rests on the absence of
+contemporaneous shocks that are differentially correlated with
+treatment status across units. We probe this assumption in Appendix B
+using a placebo exercise with lagged treatment dummies. Second, the
+controls $X_{it}$ are restricted to variables that are arguably
+predetermined relative to $D_{it}$; including endogenous controls
+would re-introduce the very bias the fixed-effects design is meant to
+purge. Third, the sample is constructed from administrative records
+described in Appendix A; differences in coverage across regions are
+small but non-trivial, and we accommodate them with sampling weights.
+
+# Results
+
+The main result is summarized in @tbl-main. Note the table is numbered
+"Table 1" — the appendix tables use a separate counter and start at
+A1 and B1.
+
+```{r}
+#| label: tbl-main
+#| tbl-cap: "Main results — effect of policy X on income"
+modelsummary(
+  list("Baseline" = baseline, "+ Controls" = controls),
+  coef_map = c("treat" = "Policy X", "age" = "Age", "educ" = "Education"),
+  gof_omit = "AIC|BIC|Log|F|RMSE|R2 Adj.",
+  fmt = 3, stars = c("*" = 0.1, "**" = 0.05, "***" = 0.01),
+  output = "kableExtra"
+) |>
+  kable_styling(latex_options = "HOLD_position", position = "center", font_size = 9)
+```
+
+The headline point estimate of
+$\hat{\beta} = `r round(coef(baseline)["treat"], 2)`$ corresponds to
+roughly a `r format(round(coef(baseline)["treat"], 0), big.mark = ",")`
+USD increase in annual income for treated observations, relative to
+the untreated counterfactual. The estimate is precisely measured
+(standard error of `r round(summary(baseline)$coefficients["treat","Std. Error"], 1)`)
+and statistically distinguishable from zero at conventional levels.
+
+Magnitudes are economically meaningful. To benchmark them, note that
+a one-standard-deviation change in education in our sample is
+associated with a
+`r round(coef(controls)["educ"] * sd(demo$educ), 0)`-USD difference
+in income; the implied treatment effect is therefore roughly
+`r round(coef(baseline)["treat"] / (coef(controls)["educ"] * sd(demo$educ)), 1)`
+times the size of this correlational benchmark. Whether this
+magnitude is plausible depends on one's prior about how much scope
+remains for policy to move outcomes in this setting — a question we
+return to in the discussion.
+
+@fig-treat-effect plots the distribution of income for treated and
+untreated observations to give a visual sense of the gap.
+
+```{r}
+#| label: fig-treat-effect
+#| fig-cap: "Income distribution by treatment status"
+#| fig-width: 5
+#| fig-height: 3
+ggplot(demo, aes(x = income, fill = factor(treat))) +
+  geom_density(alpha = 0.5, color = NA) +
+  scale_fill_manual(
+    name = NULL,
+    values = c("0" = "#7a9cc6", "1" = "#c45a4a"),
+    labels = c("0" = "Untreated", "1" = "Treated")
+  ) +
+  labs(x = "Annual income (USD)", y = "Density") +
+  theme_minimal(base_size = 9) +
+  theme(legend.position = "bottom")
+```
+
+# Discussion
+
+The findings are consistent with prior work [@angrist2009;
+@smith2020]. Three threats to the interpretation deserve attention.
+
+First, the parallel-trends assumption underlying @eq-baseline is, in
+principle, untestable; in practice, we follow common practice and
+inspect pre-trend coefficients in an event-study specification (see
+Appendix B). The estimated pre-trends are small and statistically
+indistinguishable from zero, but they are noisy enough that the
+exercise is reassuring rather than dispositive.
+
+Second, treatment exposure is correlated with several unit-level
+characteristics that may, in principle, generate effect
+heterogeneity. We document this heterogeneity in Appendix B and show
+that the headline estimate is robust to dropping the most exposed
+sub-population.
+
+Third, the outcome Y is measured with non-trivial error in part of
+the sample. Following @abadie2017 we report cluster-robust standard
+errors throughout; we have also experimented with bootstrap
+inference and the conclusions are unchanged.[^boot]
+
+[^boot]: Wild cluster bootstrap with 999 replications, following
+@cameron2015. Results are available on request.
+
+# Conclusion
+
+We have shown a reproducible Quarto setup that supports separate
+bibliographies and multiple, cross-referenceable appendices. The
+empirical exercise — illustrative as it is here — would in a real
+paper carry implications for both academic understanding of mechanism
+$M$ and for the design of policy P. We leave both for future work.
+
+```{=latex}
+\FloatBarrier
+```
+
+# References {.unnumbered}
+
+::: {#refs-main}
+:::

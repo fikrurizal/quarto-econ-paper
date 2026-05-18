@@ -1,0 +1,14 @@
+.quarto/
+template_files/
+template-numeric_files/
+template-lancet_files/
+template.html
+template.pdf
+template.tex
+template-numeric.html
+template-numeric.pdf
+template-numeric.tex
+template-lancet.html
+template-lancet.pdf
+template-lancet.tex
+*.log

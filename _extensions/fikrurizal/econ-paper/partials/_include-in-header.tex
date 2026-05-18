@@ -1,0 +1,103 @@
+% Header for econ-paper-multibib (PDF). All workarounds live here so a
+% bare template.qmd doesn't need any include-in-header of its own.
+
+% Standard packages used by the bundled partials and the template body.
+\usepackage{graphicx}
+\usepackage{bbm}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage[nomarginpar]{geometry}
+\usepackage{setspace}
+\usepackage{lscape}                % wide tables: ::: {.landscape}
+\usepackage{rotating}
+\usepackage{tabularx, calc}
+\usepackage{threeparttable}
+\usepackage{longtable}
+\usepackage{ae}
+\usepackage{float}                 % H placement specifier
+\usepackage{morefloats}
+\usepackage{palatino}              % AEA-style serif body font
+\usepackage{hyperref}
+\usepackage{color}
+\usepackage{adjustbox}
+\usepackage{booktabs}
+\usepackage[normalem]{ulem}
+\usepackage{ragged2e}
+\usepackage{changepage}
+\usepackage{placeins}              % \FloatBarrier
+\usepackage{environ}               % \NewEnviron used by tblnotes
+\usepackage{caption}
+
+\geometry{left=1.0in,right=1.0in,top=1.0in,bottom=1.0in}
+\onehalfspacing
+
+% --- Caption skips -----------------------------------------------------
+% belowcaptionskip → space below the caption text (caption-on-top
+% layouts; we want appendix table captions hugged to the table body).
+% abovecaptionskip → space above the caption text (caption-on-bottom
+% figures; 10pt gives a clear image-to-caption gap, 4pt looked glued).
+\setlength{\belowcaptionskip}{1pt}
+\setlength{\abovecaptionskip}{10pt}
+
+% --- Custom appendix-float caption tightening --------------------------
+% Quarto emits each apx* float as
+%   \begin{apxatbl}
+%   \caption{...}
+%   [blank line → \par]
+%   \centering{
+%   [blank line → \par]
+%   {\def\LTcaptype{none}\begin{longtable*}...
+% Two \par's contribute ~32pt of vertical air between caption and
+% table under \onehalfspacing. \caption's own skip can't see them.
+% Patching \caption inside apx envs to add -1em afterwards absorbs
+% them; -2em overshoots and overlaps caption with the toprule.
+\newcommand{\apxTightCaption}[1]{\apxOrigCaption{#1}\par\vspace*{-1em}}
+\AtBeginDocument{%
+  \AtBeginEnvironment{apxatbl}{\let\apxOrigCaption\caption \let\caption\apxTightCaption}%
+  \AtBeginEnvironment{apxbtbl}{\let\apxOrigCaption\caption \let\caption\apxTightCaption}%
+  \AtBeginEnvironment{apxafig}{\let\apxOrigCaption\caption \let\caption\apxTightCaption}%
+  \AtBeginEnvironment{apxbfig}{\let\apxOrigCaption\caption \let\caption\apxTightCaption}%
+}
+
+% --- Force appendix floats to stay at their source position ------------
+% Quarto declares the apx* floats with default placement [h], which
+% lets LaTeX drift them onto later pages — and a `.tblnotes` block
+% underneath then prints before the table it describes. Override after
+% \newfloat has run.
+\AtBeginDocument{%
+  \floatplacement{apxatbl}{H}%
+  \floatplacement{apxbtbl}{H}%
+  \floatplacement{apxafig}{H}%
+  \floatplacement{apxbfig}{H}%
+}
+
+% --- Bibliography entry spacing ----------------------------------------
+% Pandoc's CSLReferences env sets `\itemsep = #2\baselineskip` and
+% passes #2=1, which leaves a full empty line between references.
+% Replace with a small fixed skip. Defined after pandoc's own
+% \newenvironment (preamble) so \renewenvironment is safe.
+\renewenvironment{CSLReferences}[2]
+  {\begin{list}{}{%
+    \setlength{\itemindent}{0pt}%
+    \setlength{\leftmargin}{0pt}%
+    \setlength{\parsep}{0pt}%
+    \ifodd #1
+      \setlength{\leftmargin}{\cslhangindent}%
+      \setlength{\itemindent}{-1\cslhangindent}%
+    \fi
+    \setlength{\itemsep}{3pt}%
+  }}
+  {\end{list}}
+
+% --- Journal-style notes block -----------------------------------------
+% Triggered by `::: {.tblnotes} ... :::` in markdown. The filter
+% filters/div-to-env.lua wraps a div with class `tblnotes` in
+% \begin{tblnotes}...\end{tblnotes}.
+\NewEnviron{tblnotes}{%
+  \par\vspace{-0.5em}%
+  \begingroup
+  \footnotesize\setlength{\leftskip}{0.5em}\setlength{\rightskip}{0.5em}%
+  \noindent\BODY\par
+  \endgroup
+  \vspace{0.5em}%
+}
