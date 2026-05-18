@@ -12,3 +12,6 @@ template-lancet.html
 template-lancet.pdf
 template-lancet.tex
 *.log
+
+# Personal Claude Code overrides; settings.json (shared) IS committed.
+.claude/settings.local.json
