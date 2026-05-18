@@ -3,7 +3,13 @@
 knitr::opts_chunk$set(
   echo = FALSE, message = FALSE, warning = FALSE,
   fig.align = "center", fig.width = 5.5, fig.height = 3.5,
-  dpi = 300, dev = "pdf"
+  dpi = 300,
+  # Vector graphics in both formats: PDF for LaTeX (native), SVG via
+  # svglite for HTML (sharp at any zoom, smaller than 300dpi PNG for
+  # typical analytical plots). Setting dev = "pdf" unconditionally
+  # makes the HTML render embed PDFs via <embed src=...pdf>, which
+  # browsers wrap in a PDF-viewer toolbar around every figure.
+  dev = if (knitr::is_latex_output()) "pdf" else "svglite"
 )
 library(ggplot2)
 library(dplyr)

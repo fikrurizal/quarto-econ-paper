@@ -29,11 +29,18 @@ save you a weekend.
   conventional formatting).
 - **Landscape wide tables** (`::: {.landscape}`) for the regression
   tables that don't fit portrait.
+- **Clickable in-text citations** in PDF (citation jumps to the
+  bibliography entry via hyperref) and **SVG figures** in HTML
+  (vector, sharp at any zoom).
+- **Independent appendix page numbering**: the appendix restarts at
+  page 1 (so main 1–N, appendix 1–M). To keep the main-text page
+  count flowing through the appendix instead, see CLAUDE.md.
 - A handful of LaTeX paper-cuts smoothed over: tighter caption-to-
   table spacing in the appendix, breathing room above figure
   captions, compact bibliography line-spacing, forced `[H]`
-  placement on appendix floats so a Notes block can't print before
-  its table.
+  placement on appendix *and* main-text floats so tables/figures
+  stay anchored to the paragraph that references them, and a Notes
+  block can't drift past its table.
 
 ## Preview
 
@@ -160,8 +167,8 @@ I actually use. Pick one and delete the rest:
 
 You can switch any time by editing your document YAML — set
 `csl: ...` for a different citation style, or
-`template-partials: [...]` for a different title block. See the
-variant files for examples.
+`author-format: numeric` (vs the default `horizontal`) for a
+different title block. See the variant files for examples.
 
 ## Adopting into an existing project
 
@@ -184,17 +191,19 @@ mistakes (mismatched topic names, missing placeholder divs).
 
 ## What's wired inside
 
-| File                                                         | What it does                                          |
-| ------------------------------------------------------------ | ----------------------------------------------------- |
-| `_extensions/fikrurizal/econ-paper/_extension.yml`           | Format definition, crossref kinds, filter list        |
-| `filters/inject-bib.lua`                                     | `multibib-bibliography:` YAML → `bibliography:` map   |
-| `filters/div-to-env.lua`                                     | `.tblnotes` / `.landscape` divs → LaTeX envs          |
-| `filters/supplementary.lua`                                  | `# Foo {.supplementary}` → centered uppercase divider |
-| `filters/multibib.lua`                                       | Vendored pandoc-ext/multibib                          |
-| `partials/before-body.tex`                                   | AEA-style title block (default)                       |
-| `partials/before-body-numeric.tex`                           | Numeric superscript title block                       |
-| `partials/_include-in-header.tex`                            | LaTeX packages, caption/bib spacing, float placement  |
-| `csl/the-lancet.csl`                                         | Lancet CSL                                            |
+| File                                                | What it does                                                                                                       |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `_extensions/fikrurizal/econ-paper/_extension.yml`  | Format definition, crossref kinds, filter list                                                                     |
+| `filters/inject-bib.lua`                            | `multibib-bibliography:` YAML → `bibliography:` map                                                                |
+| `filters/author-format-flags.lua`                   | `author-format: <v>` → per-value boolean flag, consumed by `before-body.tex`                                       |
+| `filters/protect-quarto-xref.lua`                   | Stash Quarto crossref `Cite`s as `Span`s before multibib's citeproc runs (else Lancet-style CSL eats leading spaces) |
+| `filters/div-to-env.lua`                            | `.tblnotes` / `.landscape` divs → LaTeX envs                                                                       |
+| `filters/supplementary.lua`                         | `# Foo {.supplementary}` → centered uppercase divider                                                              |
+| `filters/multibib.lua`                              | Vendored pandoc-ext/multibib                                                                                       |
+| `filters/restore-quarto-xref.lua`                   | Convert stashed `Span`s back to `Cite`s for Quarto's internal crossref filter                                      |
+| `partials/before-body.tex`                          | Title block; branches on `author-format` (numeric / horizontal / vertical AEA)                                     |
+| `partials/_include-in-header.tex`                   | LaTeX packages, caption/bib spacing, float placement, `\citeproc` → `\hyperlink` override for clickable citations  |
+| `csl/the-lancet.csl`                                | Lancet CSL                                                                                                         |
 
 ## Known quirks
 

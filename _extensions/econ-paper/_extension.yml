@@ -1,6 +1,6 @@
 title: econ-paper
 author: Fikru Rizal
-version: 0.1.0
+version: 0.1.1
 quarto-required: ">=1.6.0"
 
 contributes:
@@ -8,21 +8,37 @@ contributes:
     common:
       # Filters run in order: inject-bib sets a bibliography MetaMap
       # (Quarto's YAML schema refuses `bibliography:` as a map, so we
-      # build it in Lua); div-to-env wraps `.tblnotes` / `.landscape`
-      # divs in matching LaTeX envs; supplementary turns `# Foo
-      # {.supplementary}` into a centered uppercase divider in PDF and
-      # an h2 in HTML; multibib then runs citeproc once per `#refs-*`
-      # div to produce per-topic bibliographies.
+      # build it in Lua); protect-quarto-xref stashes Quarto crossref
+      # Cite elements as Spans so multibib's citeproc pass ignores them
+      # (some citation styles, e.g. Lancet superscript, otherwise absorb
+      # the preceding Space into the citation rendering); div-to-env
+      # wraps `.tblnotes` / `.landscape` divs in matching LaTeX envs;
+      # supplementary turns `# Foo {.supplementary}` into a centered
+      # uppercase divider in PDF and an h2 in HTML; multibib then runs
+      # citeproc once per `#refs-*` div to produce per-topic
+      # bibliographies; restore-quarto-xref converts the protected
+      # crossref Spans back into Cite elements so Quarto's internal
+      # crossref filter (which runs after all user filters) can process
+      # them normally.
       filters:
         - filters/inject-bib.lua
+        - filters/author-format-flags.lua
+        - filters/protect-quarto-xref.lua
         - filters/div-to-env.lua
         - filters/supplementary.lua
         - filters/multibib.lua
+        - filters/restore-quarto-xref.lua
 
       # multibib runs citeproc itself; disabling Quarto's own citeproc
       # pass prevents double-rendering.
       cite-method: citeproc
       citeproc: false
+
+      # Make in-text citations clickable hyperlinks to their bibliography
+      # entry. Without this citeproc emits bare text ("Smith and Doe
+      # 2020") instead of \hyperlink{ref-smith2020}{Smith and Doe 2020}
+      # for LaTeX and equivalents for other writers.
+      link-citations: true
 
       # Custom crossref kinds give appendices independent counters:
       # Table A1, Table A2, ..., Table B1, ..., Figure A1, Figure B1.

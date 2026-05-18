@@ -62,9 +62,15 @@
 % --- Force appendix floats to stay at their source position ------------
 % Quarto declares the apx* floats with default placement [h], which
 % lets LaTeX drift them onto later pages — and a `.tblnotes` block
-% underneath then prints before the table it describes. Override after
-% \newfloat has run.
+% underneath then prints before the table it describes. Same problem
+% applies to main-text `table`/`figure` envs that Quarto emits for
+% chunks with `#| tbl-cap` / `#| fig-cap`: without `[H]` the table
+% can float to the top of a later page, separating it from the
+% paragraph that references it. `tbl-pos: H` in YAML doesn't reach
+% these chunk-wrapped envs in current Quarto, so override globally.
 \AtBeginDocument{%
+  \floatplacement{table}{H}%
+  \floatplacement{figure}{H}%
   \floatplacement{apxatbl}{H}%
   \floatplacement{apxbtbl}{H}%
   \floatplacement{apxafig}{H}%
@@ -89,15 +95,60 @@
   }}
   {\end{list}}
 
+% --- Clickable in-text citations ---------------------------------------
+% pandoc emits each resolved citation as `\citeproc{key}{text}` and
+% defines that macro (in `\NewDocumentCommand\citeproc{mm}{...}` in
+% the auto-generated preamble) as a natbib bridge: it begins a group,
+% binds `\citeproctext` to `text`, then calls `\cite{key}`. With
+% natbib loaded, hyperref's `\Hy@cite` patch makes the citation
+% clickable.
+%
+% We INTENTIONALLY don't load natbib here, because pandoc's CSL
+% bibliography emits `\bibitem[\citeproctext]{ref-key}` — the
+% bibitem label is the literal token `\citeproctext`, which is
+% globally empty (only locally bound by `\citeproc{}{}`). natbib's
+% `\cite` looks up that label from the .aux at top level (where
+% `\citeproctext` is empty) and renders empty citation text. Both
+% pandoc issues #9022 / #9031 assume natbib-format bibliographies
+% where the label resolves to author-year; the assumption breaks for
+% CSL bibliographies (which is exactly what the multibib filter
+% produces).
+%
+% So we override `\citeproc` to bypass `\cite` entirely and jump
+% directly to a `\hypertarget` we plant at each `\bibitem`. Keys
+% already carry the `ref-` prefix, so no extra prefix is needed.
+\RenewDocumentCommand\citeproc{mm}{\hyperlink{#1}{#2}}
+\newcommand\econPaperBibitem[2][\null]{%
+  \origbibitem[#1]{#2}\hypertarget{#2}{}%
+}
+\AtBeginEnvironment{CSLReferences}{%
+  \let\origbibitem\bibitem%
+  \let\bibitem\econPaperBibitem%
+}
+
 % --- Journal-style notes block -----------------------------------------
 % Triggered by `::: {.tblnotes} ... :::` in markdown. The filter
 % filters/div-to-env.lua wraps a div with class `tblnotes` in
 % \begin{tblnotes}...\end{tblnotes}.
+% Tight spacing between the apx* table and its Notes block. There
+% are TWO stacked floats above us (the outer apx* env plus the
+% inner `\begin{table}[H]` that kable_styling's HOLD_position
+% wraps the tabular in), so we cancel `2\intextsep` to clear both
+% post-float skips. Empirically a slightly larger negative vspace
+% reads tighter once `\onehalfspacing` line-stretch is accounted
+% for too. `\setlength{\parindent}{0pt}` zeros first-line indent
+% on every paragraph in the block (`\noindent` alone would only
+% fix the first paragraph AND only fires if the token comes
+% immediately before the paragraph — the blank lines around the
+% div content insert a \par that swallows a bare \noindent). No
+% left/right margin indent — notes span the full text width,
+% matching most journals.
 \NewEnviron{tblnotes}{%
-  \par\vspace{-0.5em}%
+  \par\vspace*{-2\intextsep}%
   \begingroup
-  \footnotesize\setlength{\leftskip}{0.5em}\setlength{\rightskip}{0.5em}%
-  \noindent\BODY\par
+  \footnotesize%
+  \setlength{\parindent}{0pt}%
+  \BODY\par
   \endgroup
   \vspace{0.5em}%
 }

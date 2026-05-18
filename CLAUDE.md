@@ -27,16 +27,24 @@ The repo is **self-contained**: no Quarto extension dependencies.
 _extensions/econ-paper/
   _extension.yml        — format definition + filter list + crossref kinds
   filters/
-    inject-bib.lua      — multibib-bibliography YAML key → bibliography map
-    div-to-env.lua      — .tblnotes / .landscape divs → LaTeX envs
-    supplementary.lua   — # Foo {.supplementary} → centered uppercase divider
-    multibib.lua        — vendored (Albert Krewinkel, ISC); don't edit
+    inject-bib.lua             — multibib-bibliography YAML key → bibliography map
+    author-format-flags.lua    — `author-format: <v>` → `author-format-<v>: true`
+    protect-quarto-xref.lua    — stash Quarto crossref Cites as Spans before
+                                 multibib's citeproc pass (else Lancet-style
+                                 CSL absorbs the leading space)
+    div-to-env.lua             — .tblnotes / .landscape divs → LaTeX envs
+    supplementary.lua          — # Foo {.supplementary} → centered uppercase
+    multibib.lua               — vendored (Albert Krewinkel, ISC); don't edit
+    restore-quarto-xref.lua    — restore stashed Spans → Cites so Quarto's
+                                 internal crossref filter sees them normally
   partials/
     _include-in-header.tex  — packages, caption skips, float placement,
                               CSLReferences override, tblnotes env,
-                              caption-patch for apx envs
-    before-body.tex         — AEA-style title block (default)
-    before-body-numeric.tex — numeric-superscript title block (variant)
+                              caption-patch for apx envs, citeproc →
+                              \hyperlink override for clickable citations
+    before-body.tex         — title block; branches on `author-format`
+                              between numeric-superscript, horizontal AEA
+                              and vertical AEA layouts
   csl/the-lancet.csl    — vendored (CC BY-SA 3.0); don't edit
 
 template.qmd, template-numeric.qmd, template-lancet.qmd  — three sibling
@@ -61,6 +69,13 @@ the constraint:
 | `\let\NAT@force@numbers\@empty` in the include-in-header      | Defensive: if the aea (`hchulkim/econ-paper-template`) extension is *also* loaded in a user project, it auto-loads natbib, which then chokes on citeproc's `\bibitem[\citeproctext]` output. The neutralizer makes the mix survive.                      |
 | `geom_bin2d` not `geom_hex` in `sections/_appendix.qmd`       | `geom_hex` silently renders an empty plot when the `hexbin` package isn't installed (common in CI). `geom_bin2d` is base ggplot2.                                                                                                                       |
 | Multi-panel figure via `patchwork`, not Quarto subfigures     | Native Quarto subfigures (`layout-ncol=2`) inside custom crossref kinds (`apxafig`) render with stacked panels and overlapping captions. `patchwork::wrap_plots` produces one float, one caption, panels side-by-side, reliably.                       |
+| `\RenewDocumentCommand\citeproc{mm}{\hyperlink{#1}{#2}}` + `\AtBeginEnvironment{CSLReferences}` patching `\bibitem` to plant `\hypertarget` | Pandoc emits citations as `\citeproc{ref-key}{text}` and defines that as a natbib bridge (`\cite{ref-key}` inside a group). With CSL bibitems (`\bibitem[\citeproctext]{ref-key}`) the natbib chain breaks: `\citeproctext` is globally empty, so .aux records an empty label and `\cite` renders nothing. Pandoc considers this intended (see [pandoc#9022/#9031](https://github.com/jgm/pandoc/issues/9022)); the natbib bridge is meant for natbib-format bibs, not CSL. Loading natbib alone produces clickable-but-empty citations (verified). The override jumps straight to a `\hypertarget` we plant at each bibitem — sidesteps `\cite` entirely. Brittle on pandoc upgrade (silent fallback to plain-text citations); the CI smoke test should assert `/Subtype /Link` count > 0 in `template.pdf`. |
+| `protect-quarto-xref.lua` + `restore-quarto-xref.lua` around `multibib.lua` | In Quarto's default flow, the crossref filter runs *before* citeproc, so crossref `@tbl-foo` Cites never reach citeproc. With multibib, multibib's citeproc invocation is a *user* filter — user filters run *before* Quarto's internal crossref filter. So crossref Cites (`@apxatbl-summary` etc.) get fed through citeproc and styles that attach citations to the preceding word (Lancet's superscript) eat the leading `Space` AST node. The pair of filters stashes crossref-pattern Cites in Spans before multibib (citeproc passes Spans through), then converts back after. Pattern list lives in `protect-quarto-xref.lua` — add new Quarto crossref prefixes there. |
+| Unified `before-body.tex` with `$if(author-format-numeric)$ ... $elseif(author-format-horizontal)$` branching, driven by `author-format-flags.lua` | The earlier design had two partial files (`before-body.tex` and `before-body-numeric.tex`) selected via Quarto's `template-partials:` YAML. But pandoc identifies partials by **basename matching a known slot name** (`before-body`, `header-includes`, …); a basename of `before-body-numeric` matches no slot, so the override silently no-op'd and `template-numeric.qmd` was rendering with the default AEA stack — broken since extension creation, visible only by inspecting the title block. The lua filter translates `author-format: <value>` into per-value flags so pandoc's template (which can't compare strings directly) can branch via `$if(...)$`. |
+| `\AtBeginDocument{\floatplacement{table}{H}\floatplacement{figure}{H}}` for main-text floats | Quarto's chunk-level `tbl-cap` / `fig-cap` wraps the chunk output in its own `\begin{table}` / `\begin{figure}` without `[H]`. The YAML keys `tbl-pos: H` / `fig-pos: H` don't reach these wrappers in the current Quarto version (verified by inspecting `template.tex`). Without forced placement, the main-text modelsummary table drifts to the top of the next page, pulling its `* p < 0.1, **...` footer with it and visually separating it from "The main result is summarized in Table 1." Forcing `H` globally pins them to source. |
+| `dev = if (knitr::is_latex_output()) "pdf" else "svglite"` in setup chunk | Setting `dev = "pdf"` unconditionally makes the HTML render embed PDFs via `<embed src=...pdf>`, which browsers wrap in a PDF-viewer toolbar/frame around every figure. SVG via `svglite` is vector everywhere (no Inkscape required, unlike the `svg` LaTeX package). The CI workflow installs `any::svglite`. |
+| `\vspace{-\intextsep}` in the `tblnotes` environment (no left/right `\setlength{\..skip}`) | LaTeX inserts `\intextsep` (default ~12pt) below every float, so a Notes block immediately after an `apx*` table sat with a visible gap from the table's `\bottomrule`. The earlier `-0.5em` reclaim was too small. Pulling back exactly `\intextsep` snugs the notes to the table. No left/right indent — most journal styles want notes spanning full text width. |
+| `supplementary.lua` emits `\clearpage\setcounter{page}{1}` before the APPENDIX divider | Without it, the appendix continues main-text page numbering (e.g., main 1–5, appendix 6–10). Most journals expect appendix pages to restart at 1. To revert to continued numbering, drop the `\setcounter{page}{1}` from the raw block. |
 
 ## How to test a change
 
@@ -77,7 +92,36 @@ After editing any extension file:
    directory. **But**: paths in `template-numeric.qmd` and
    `template-lancet.qmd` reference `_extensions/fikrurizal/econ-paper/...`
    (where Quarto installs into a *user* project). Those variants will
-   fail when rendered from the source repo. Test them via path #2.
+   fail when rendered from the source repo. Test them via path #2 or
+   the install-side mirror trick (path #1b).
+
+1b. **Install-side mirror trick** (source-side render of the variants
+    without pushing): replicate the install-side path locally so the
+    variants resolve their `_extensions/fikrurizal/econ-paper/...`
+    references against the same source tree you're editing.
+
+    ```bash
+    rm -rf _extensions/fikrurizal
+    mkdir _extensions/fikrurizal
+    cp -r _extensions/econ-paper _extensions/fikrurizal/econ-paper
+    quarto render template-numeric.qmd
+    quarto render template-lancet.qmd
+    rm -rf _extensions/fikrurizal
+    ```
+
+    Quarto's extension resolution prefers a local match for the named
+    extension, so this lets you iterate on all three variants without
+    waiting for a CI cycle. The mirror is gitignored by virtue of the
+    `fikrurizal` directory being absent from the tracked tree —
+    don't accidentally `git add` it.
+
+    **Always test all three variants** before declaring a change
+    done. Recent silent failures: `template-numeric.qmd` was
+    broken since extension creation because its title-block override
+    used a partial basename pandoc doesn't recognise; the Lancet
+    variant absorbed leading spaces around crossref Cites because
+    its CSL attaches citations to the preceding word. Both fixed
+    once the variants were exercised — not before.
 
 2. **Installed-side render** (full integration, tests what users
    will actually experience):

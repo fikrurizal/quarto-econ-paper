@@ -1,9 +1,12 @@
 ---
 # VARIANT — numeric superscript affiliations. Same body as
-# template.qmd; differs only in the title-block partial.
+# template.qmd; differs only in the `author-format: numeric` setting,
+# which the extension's author-format-flags.lua filter consumes to
+# switch the title-block branch in partials/before-body.tex.
 title: "Your paper title here"
 title-footnote: |
   Footnote attached to the title.
+author-format: numeric
 author:
   - name: First Author
     acknowledgements: |
@@ -35,10 +38,6 @@ multibib-bibliography:
 format:
   econ-paper-pdf:
     keep-tex: true
-    # Swap the default AEA-style title block for a numeric-superscript
-    # one (First Author^{1,2}  Second Author^{2} + numbered list).
-    template-partials:
-      - _extensions/fikrurizal/econ-paper/partials/before-body-numeric.tex
   econ-paper-html: default
 ---
 

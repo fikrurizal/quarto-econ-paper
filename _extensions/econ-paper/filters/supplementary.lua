@@ -14,9 +14,14 @@ function Header(el)
 
   if quarto.doc.is_format("pdf") then
     local title_text = pandoc.text.upper(pandoc.utils.stringify(el.content))
+    -- Reset the page counter at the appendix divider so the appendix
+    -- starts at page 1 again (independent numbering from the main
+    -- text). To keep the running numbering continued from the main
+    -- text instead, drop the `\setcounter{page}{1}` line.
     return pandoc.Div({
       pandoc.RawBlock("latex",
-        "\\bigskip\n\\begin{center}{\\large\\bf " .. title_text .. "}\\end{center}\n")
+        "\\clearpage\\setcounter{page}{1}%\n"
+        .. "\\bigskip\n\\begin{center}{\\large\\bf " .. title_text .. "}\\end{center}\n")
     }, el.attr)
   end
 

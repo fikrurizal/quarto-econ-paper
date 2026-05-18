@@ -46,6 +46,7 @@ jobs:
             any::broom
             any::patchwork
             any::pdftools
+            any::svglite
 
       - name: Render template.qmd (PDF + HTML)
         run: quarto render template.qmd
