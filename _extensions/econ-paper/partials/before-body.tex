@@ -37,14 +37,16 @@ $if(author-format-numeric)$
 % \author{...} block (which the later call cleanly overwrites) avoids
 % the problem.
 \author{%
+\parbox{0.95\textwidth}{\centering
 $for(by-author)$
   $it.name.literal$\textsuperscript{$for(it.affiliations)$$it.number$$sep$,$endfor$}$if(it.acknowledgements)$\thanks{$it.acknowledgements$}$endif$$sep$ \quad
 $endfor$
   \\[0.6em]
-  \normalsize
+  \small
 $for(by-affiliation)$
   \textsuperscript{$it.number$}\,$if(it.department)$$it.department$, $endif$$if(it.name)$$it.name$$endif$$sep$\\
 $endfor$
+}%
 }
 $elseif(author-format-horizontal)$
 % --- Horizontal AEA-style (authors side-by-side) ------------------------

@@ -8,6 +8,7 @@
 
 local class_to_env = {
   tblnotes  = "tblnotes",
+  fignotes  = "fignotes",   -- notes under a bottom-captioned figure float
   landscape = "landscape",  -- from lscape/pdflscape package
 }
 

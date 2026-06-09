@@ -1,0 +1,40 @@
+/* Keep kableExtra table notes visually full-width in HTML. */
+.cell-output-display table tfoot {
+  display: table-caption;
+  caption-side: bottom;
+  width: 100%;
+}
+
+.cell-output-display table tfoot tr,
+.cell-output-display table tfoot td:first-child {
+  display: block;
+  width: 100%;
+}
+
+.cell-output-display table tfoot td {
+  display: none;
+}
+
+.cell-output-display table tfoot td:first-child {
+  padding-top: 0.35rem !important;
+  text-align: left !important;
+}
+
+/* Journal-style table/figure notes: small, muted, set off from body prose
+   (mirrors the \footnotesize notes environments in the PDF). Size/colour are
+   set on the inner <p> (not the div) with an absolute rem so the rule beats
+   Bootstrap's `p` styling and does not compound through inheritance. */
+.tblnotes,
+.fignotes {
+  width: 100%;
+  margin-top: -0.5rem;       /* pull the note up close to the caption/table above */
+  margin-bottom: 1.25rem;
+}
+
+.tblnotes p,
+.fignotes p {
+  margin-bottom: 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--bs-secondary-color, #6c757d);  /* match the figure-caption grey */
+}

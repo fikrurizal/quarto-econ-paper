@@ -1,6 +1,6 @@
 title: econ-paper
 author: Fikru Rizal
-version: 0.1.1
+version: 0.1.2
 quarto-required: ">=1.6.0"
 
 contributes:
@@ -79,9 +79,9 @@ contributes:
       papersize: letter
       number-sections: true
       indent: true
-      citecolor: cyan
-      linkcolor: cyan
-      urlcolor: cyan
+      citecolor: paperlinkblue
+      linkcolor: paperlinkblue
+      urlcolor: paperlinkblue
       include-in-header: partials/_include-in-header.tex
       # Default title block is AEA-style (each author + their full
       # affiliation stack). For numeric superscript affiliations
@@ -94,3 +94,4 @@ contributes:
       number-sections: true
       toc: true
       theme: cosmo
+      css: styles.css
