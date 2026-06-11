@@ -75,6 +75,37 @@
   \floatplacement{apxbfig}{H}%
 }
 
+% --- Keep notes blocks attached to their appendix float -----------------
+% The [H] float mechanism ends with `\box\@currbox \vskip\intextsep`
+% (float.sty, \float@endH). That trailing glue is the ONLY legal
+% page-break point between the float box and the notes block that
+% follows: TeX may break at glue only when the preceding item is a box,
+% and every later glue (the tblnotes/fignotes \par and \vspace*s)
+% follows glue or a penalty, so it is not breakable. The \nopagebreak[4]
+% inside the notes envs therefore executes too late, and a float ending
+% near the page bottom ships its ENTIRE notes block to the next page.
+% Inserting \penalty\@M between box and glue makes that breakpoint
+% illegal: TeX must break BEFORE the float instead, so the float and at
+% least the first note lines always share a page, while long notes
+% remain internally breakable (tail may overflow) as designed. Scoped to
+% the apx* envs via \AtBeginEnvironment -- \patchcmd redefines locally
+% within the environment group -- so main-text [H] floats keep normal
+% page breaking.
+\makeatletter
+\newcommand\apxKeepNotesAttached{%
+  \patchcmd{\float@endH}
+    {\box\@currbox\vskip\intextsep}
+    {\box\@currbox\penalty\@M\vskip\intextsep}
+    {}{}%
+}
+\makeatother
+\AtBeginDocument{%
+  \AtBeginEnvironment{apxatbl}{\apxKeepNotesAttached}%
+  \AtBeginEnvironment{apxbtbl}{\apxKeepNotesAttached}%
+  \AtBeginEnvironment{apxafig}{\apxKeepNotesAttached}%
+  \AtBeginEnvironment{apxbfig}{\apxKeepNotesAttached}%
+}
+
 % --- Centre appendix figure captions -----------------------------------
 % Appendix figure floats are bottom-captioned; their captions are often
 % multi-line, which the caption package justifies (looks left-aligned). Centre
