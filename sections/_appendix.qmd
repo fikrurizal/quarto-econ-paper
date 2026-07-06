@@ -21,7 +21,13 @@ demo |>
   mutate(across(c(Mean, SD, Min, Max), \(x) round(x, 1))) |>
   kable(format = "latex", booktabs = TRUE, linesep = "",
         align = c("l", rep("r", 5))) |>
-  kable_styling(latex_options = "HOLD_position", position = "center", font_size = 9)
+  # Inside a custom table float (apxatbl/apxbtbl/maintbl div) the table must
+  # stay a BARE tabular: no hold_position, and position = "left" (NOT
+  # "center", which wraps the tabular in \begin{table} — the float centres
+  # it anyway). This keeps the caption and the .tblnotes block at the exact
+  # same distance from every table; see the notes-block section of
+  # partials/_include-in-header.tex.
+  kable_styling(position = "left", font_size = 9)
 ```
 
 Summary statistics for the analysis sample.
@@ -50,7 +56,7 @@ demo |>
   mutate(across(c(Income, Age, Education), \(x) round(x, 1))) |>
   kable(format = "latex", booktabs = TRUE, linesep = "",
         align = c("l", rep("r", 4))) |>
-  kable_styling(latex_options = "HOLD_position", position = "center", font_size = 9)
+  kable_styling(position = "left", font_size = 9)
 ```
 
 Balance check across treatment and control groups.
@@ -143,7 +149,11 @@ modelsummary(
   fmt = 3, stars = c("*" = 0.1, "**" = 0.05, "***" = 0.01),
   output = "kableExtra"
 ) |>
-  kable_styling(latex_options = "HOLD_position", position = "center", font_size = 9)
+  kable_styling(position = "left", font_size = 9) |>
+  # modelsummary's kableExtra output carries a \begin{table} wrapper that
+  # must not survive inside the float div — see bare_tabular() in the
+  # setup chunk of _main.qmd.
+  bare_tabular()
 ```
 
 Robustness of the main estimate to alternative specifications.
@@ -170,7 +180,8 @@ modelsummary(
   fmt = 3, stars = c("*" = 0.1, "**" = 0.05, "***" = 0.01),
   output = "kableExtra"
 ) |>
-  kable_styling(latex_options = "HOLD_position", position = "center", font_size = 9)
+  kable_styling(position = "left", font_size = 9) |>
+  bare_tabular()
 ```
 
 Alternative identification strategies.
@@ -225,7 +236,7 @@ event_tab |>
   ) |>
   kable(format = "latex", booktabs = TRUE, escape = FALSE, linesep = "",
         align = c("l", rep("c", 5))) |>
-  kable_styling(latex_options = "HOLD_position", position = "center", font_size = 9) |>
+  kable_styling(position = "left", font_size = 9) |>
   add_header_above(c(" " = 1, "Specification" = 5))
 ```
 

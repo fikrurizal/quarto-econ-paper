@@ -56,19 +56,40 @@
 \newcommand{\apxTightCaption}[1]{\apxOrigCaption{#1}\par\vspace*{-1em}}
 % Only the TABLE floats get the tight (caption-on-top) patch. Figure floats are
 % bottom-captioned, so pulling the following content up overlaps the caption with
-% its notes; they use the .fignotes block (below) for spacing instead.
+% its notes; they use the .fignotes block (below) for spacing instead. `maintbl` is
+% the main-text table float (Table 1, 2, ...): same top-captioned kableExtra
+% object as the appendix tables, so it gets the identical treatment.
 \AtBeginDocument{%
+  \AtBeginEnvironment{maintbl}{\let\apxOrigCaption\caption \let\caption\apxTightCaption}%
   \AtBeginEnvironment{apxatbl}{\let\apxOrigCaption\caption \let\caption\apxTightCaption}%
   \AtBeginEnvironment{apxbtbl}{\let\apxOrigCaption\caption \let\caption\apxTightCaption}%
+}
+
+% --- Normalise longtable glue inside table floats -----------------------
+% A markdown pipe table inside a custom table float is emitted as a
+% longtable*, which inserts \LTpre above and \LTpost below itself
+% (~\bigskipamount each). kableExtra tables (bare tabulars, see the notes
+% block below) carry no such glue, so a pipe-table float would sit ~12pt
+% lower under its caption and push its tblnotes ~12pt further down. Zero
+% both inside the table float kinds (locally: the settings die with the
+% float's environment group) so both table sources land the identical
+% caption/notes spacing.
+\AtBeginDocument{%
+  \AtBeginEnvironment{maintbl}{\setlength{\LTpre}{0pt}\setlength{\LTpost}{0pt}}%
+  \AtBeginEnvironment{apxatbl}{\setlength{\LTpre}{0pt}\setlength{\LTpost}{0pt}}%
+  \AtBeginEnvironment{apxbtbl}{\setlength{\LTpre}{0pt}\setlength{\LTpost}{0pt}}%
 }
 
 % --- Force appendix floats to stay at their source position ------------
 % Quarto declares the apx* floats with default placement [h], which
 % lets LaTeX drift them onto later pages — and a `.tblnotes` block
 % underneath then prints before the table it describes. Keep this
-% override scoped to appendix custom floats; ordinary main-text floats
-% should remain free to move so LaTeX does not leave large blank areas.
+% override scoped to the custom float kinds (the appendix floats and the
+% main-text `maintbl` tables, which carry their notes directly underneath);
+% ordinary main-text floats should remain free to move so LaTeX does not
+% leave large blank areas.
 \AtBeginDocument{%
+  \floatplacement{maintbl}{H}%
   \floatplacement{apxatbl}{H}%
   \floatplacement{apxbtbl}{H}%
   \floatplacement{apxafig}{H}%
@@ -87,10 +108,13 @@
 % Inserting \penalty\@M between box and glue makes that breakpoint
 % illegal: TeX must break BEFORE the float instead, so the float and at
 % least the first note lines always share a page, while long notes
-% remain internally breakable (tail may overflow) as designed. Scoped to
-% the apx* envs via \AtBeginEnvironment -- \patchcmd redefines locally
-% within the environment group -- so main-text [H] floats keep normal
-% page breaking.
+% remain internally breakable (tail may overflow) as designed. Scoped via
+% \AtBeginEnvironment to the note-bearing [H] floats -- \patchcmd redefines
+% locally within each environment group -- so other main-text floats keep
+% normal page breaking. Applied to: the custom appendix floats, the main-text
+% `maintbl` tables, and the native `figure` environment (the main-text figures are
+% [H] via fig-pos and each is followed by a .fignotes block, so they need the
+% same anti-orphan protection the appendix figures already get).
 \makeatletter
 \newcommand\apxKeepNotesAttached{%
   \patchcmd{\float@endH}
@@ -100,6 +124,8 @@
 }
 \makeatother
 \AtBeginDocument{%
+  \AtBeginEnvironment{maintbl}{\apxKeepNotesAttached}%
+  \AtBeginEnvironment{figure}{\apxKeepNotesAttached}%
   \AtBeginEnvironment{apxatbl}{\apxKeepNotesAttached}%
   \AtBeginEnvironment{apxbtbl}{\apxKeepNotesAttached}%
   \AtBeginEnvironment{apxafig}{\apxKeepNotesAttached}%
@@ -170,29 +196,41 @@
 % markdown; filters/div-to-env.lua wraps the div in the matching env.
 %
 % tblnotes (below a TOP-captioned table) and fignotes (below a BOTTOM-captioned
-% figure) are kept visually identical: same font (\footnotesize), no paragraph
+% figure) are visually identical: same font (\footnotesize), no paragraph
 % indent, the SAME gap above the notes (\noteTopGap) and the SAME gap below
-% (\noteBotGap). They differ only in how much post-float skip they must cancel
-% to land that common gap, because a table float has TWO stacked floats above
-% it (the apx* env + the inner \begin{table}[H] from HOLD_position) while a
-% figure float has ONE. `\setlength{\parindent}{0pt}` zeros the first-line
+% (\noteBotGap). `\setlength{\parindent}{0pt}` zeros the first-line
 % indent on every paragraph (a bare \noindent only fixes the first and is
 % swallowed by the \par the surrounding blank lines insert).
 %
+% Every note-bearing float is typeset [H] (see \floatplacement above), and an
+% [H] float ends with exactly `\box\@currbox \vskip\intextsep` (float.sty,
+% \float@endH). Tables inside the custom floats must be BARE tabulars -- no
+% nested \begin{table} wrapper, i.e. kableExtra WITHOUT hold_position and with
+% position = "left" (kableExtra's "center" adds the wrapper; the float's own
+% \centering{...} centres a bare tabular anyway). Quarto strips such a nested
+% wrapper only for float kinds whose reference-prefix is exactly "Table"
+% (maintbl), NOT for the appendix kinds ("Table A"/"Table B"), so a wrapped
+% table makes the appendix gaps differ from the main text. With bare tabulars
+% that single \intextsep is the ONLY glue between the float box and the note,
+% for every float kind (maintbl, apxatbl, apxbtbl,
+% figure, apxafig, apxbfig). The note cancels it exactly (-\intextsep) and
+% suppresses the interline glue of its own first line (\nointerlineskip), so
+% the visible gap is exactly \noteTopGap everywhere, independent of float kind
+% and font metrics.
+%
 % \noteTopGap : visible space between the table/figure and its notes.
 % \noteBotGap : space between the notes and the following paragraph/section.
-\newlength{\noteTopGap}\setlength{\noteTopGap}{6pt}
+\newlength{\noteTopGap}\setlength{\noteTopGap}{4pt}
 \newlength{\noteBotGap}\setlength{\noteBotGap}{1em}
 
 % Both note blocks flow as normal (breakable) text rather than an unbreakable
 % minipage: the note stays attached to its float (first lines on the float's
 % page, tail overflowing) instead of the whole block jumping to the next page
 % when a tall table/figure leaves little room. `\nopagebreak[4]` discourages a
-% break immediately after the float. tblnotes and fignotes are identical except
-% for how much post-float skip they cancel (a table float has two stacked floats
-% above it, a figure one).
+% break immediately after the float.
 \NewEnviron{tblnotes}{%
-  \par\vspace*{-2\intextsep}\vspace*{\noteTopGap}%
+  \par\nointerlineskip
+  \vspace*{-\intextsep}\vspace*{\noteTopGap}%
   \nopagebreak[4]%
   \noindent{%
     \footnotesize%
@@ -203,7 +241,8 @@
 }
 
 \NewEnviron{fignotes}{%
-  \par\vspace*{-1\intextsep}\vspace*{\noteTopGap}%
+  \par\nointerlineskip
+  \vspace*{-\intextsep}\vspace*{\noteTopGap}%
   \nopagebreak[4]%
   \noindent{%
     \footnotesize%
@@ -212,3 +251,4 @@
   }%
   \vspace{\noteBotGap}%
 }
+
