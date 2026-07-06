@@ -19,14 +19,21 @@ save you a weekend.
 - **Independently numbered appendix tables and figures**: Table A1,
   A2, B1, B2; Figure A1, B1. Cross-referenceable from the main text
   with `@apxatbl-foo`.
+- **A main-text table kind** (`::: {#maintbl-results}` → "Table 1",
+  "Table 2", ...) for tables that carry a `.tblnotes` block. It gets
+  the identical caption and notes spacing as the appendix tables, and
+  side-steps Quarto's unreliable native `tbl-` crossref detection of
+  kableExtra output.
 - **AEA-style title block** by default (adapted from
   hchulkim/econ-paper-template), with a numeric-superscript variant
   if you want the more biomedical-looking author block.
 - **Lancet citation style** as a bundled variant — useful when a
   health-econ paper is going to a medical journal.
 - **Journal-style notes** under tables and figures
-  (`::: {.tblnotes}` → small italic indented block, *Notes:* on
-  conventional formatting).
+  (`::: {.tblnotes}` → small italic block, *Notes:* on conventional
+  formatting), typeset at the *same fixed distance* below every
+  table and figure — main text and appendix, kableExtra and markdown
+  pipe tables alike.
 - **Landscape wide tables** (`::: {.landscape}`) for the regression
   tables that don't fit portrait.
 - **Clickable in-text citations** in PDF (citation jumps to the
@@ -143,7 +150,27 @@ Income reported in 2020 USD.
 
 Reference it from prose with `@apxatbl-summary` (renders as
 "Table A1"). Other prefixes: `apxbtbl-` for Appendix B tables,
-`apxafig-`/`apxbfig-` for figures.
+`apxafig-`/`apxbfig-` for figures, and `maintbl-` for main-text
+tables ("Table 1") that carry a `.tblnotes` block — same div
+pattern, same spacing.
+
+**kableExtra tables inside these float divs must stay bare
+tabulars.** Use
+
+```r
+kbl(df, booktabs = TRUE) |>
+  kable_styling(position = "left", font_size = 9)
+```
+
+and do *not* pass `latex_options = "HOLD_position"` or
+`position = "center"`: both wrap the tabular in an extra
+`\begin{table}`, whose float glue makes the notes sit visibly lower
+under appendix tables than under main-text ones (Quarto strips that
+wrapper for `maintbl` but not for the `apx*` kinds). The float div
+already pins placement and centres the table. Markdown pipe tables
+need no special care. `modelsummary(output = "kableExtra")` always
+emits the wrapper — pipe it through the `bare_tabular()` helper
+defined in the demo's setup chunk (`sections/_main.qmd`).
 
 For the appendix divider that prints "APPENDIX" centered in caps:
 
@@ -202,7 +229,7 @@ mistakes (mismatched topic names, missing placeholder divs).
 | `filters/multibib.lua`                              | Vendored pandoc-ext/multibib                                                                                       |
 | `filters/restore-quarto-xref.lua`                   | Convert stashed `Span`s back to `Cite`s for Quarto's internal crossref filter                                      |
 | `partials/before-body.tex`                          | Title block; branches on `author-format` (numeric / horizontal / vertical AEA)                                     |
-| `partials/_include-in-header.tex`                   | LaTeX packages, caption/bib spacing, float placement, `\citeproc` → `\hyperlink` override for clickable citations  |
+| `partials/_include-in-header.tex`                   | LaTeX packages, caption/bib spacing, float placement, `tblnotes`/`fignotes` envs (fixed table→notes gap), `\citeproc` → `\hyperlink` override for clickable citations  |
 | `csl/the-lancet.csl`                                | Lancet CSL                                                                                                         |
 
 ## Known quirks

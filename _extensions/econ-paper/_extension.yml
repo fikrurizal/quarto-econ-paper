@@ -1,6 +1,6 @@
 title: econ-paper
 author: Fikru Rizal
-version: 0.1.3
+version: 0.1.4
 quarto-required: ">=1.6.0"
 
 contributes:
@@ -42,8 +42,22 @@ contributes:
 
       # Custom crossref kinds give appendices independent counters:
       # Table A1, Table A2, ..., Table B1, ..., Figure A1, Figure B1.
+      # `maintbl` is a main-text table kind (Table 1, 2, ...) for tables that
+      # carry a journal-style `.tblnotes` block: kableExtra output is not
+      # reliably picked up by Quarto's native tbl- crossref, and a custom
+      # float lets the header give main-text and appendix tables identical
+      # caption/notes spacing. Main-text figures keep the native fig- kind.
       crossref:
         custom:
+          - kind: float
+            key: maintbl
+            reference-prefix: Table
+            latex-env: maintbl
+            # true (unlike the apx kinds): prefix ends in a word, so in-text
+            # refs need the space — "Table 1", not "Table1".
+            space-before-numbering: true
+            caption-location: top
+            latex-list-of-description: Table
           - kind: float
             key: apxatbl
             reference-prefix: Table A

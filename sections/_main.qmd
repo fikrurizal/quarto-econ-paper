@@ -18,6 +18,20 @@ library(kableExtra)
 library(modelsummary)
 library(broom)
 
+# Tables inside the custom float divs (maintbl/apxatbl/apxbtbl) must be BARE
+# tabulars: an inner \begin{table} wrapper is a nested float (illegal inside
+# the [H] float, "Not in outer par mode") and its glue breaks the uniform
+# caption/notes spacing the extension guarantees. Plain kbl() output is
+# already bare when piped through kable_styling(position = "left", ...), but
+# modelsummary's "kableExtra" output always carries the wrapper — this strips
+# it while keeping the knitr_kable class so the chunk still prints as LaTeX.
+bare_tabular <- function(k) {
+  s <- sub("\\\\begin\\{table\\}(\\[[^]]*\\])?", "", as.character(k))
+  s <- sub("\\\\end\\{table\\}", "", s)
+  attributes(s) <- attributes(k)
+  s
+}
+
 # Reproducible toy data used throughout the demo so figures/tables
 # are computed (not placeholders).
 set.seed(20260518)
@@ -115,13 +129,14 @@ small but non-trivial, and we accommodate them with sampling weights.
 
 # Results
 
-The main result is summarized in @tbl-main. Note the table is numbered
-"Table 1" — the appendix tables use a separate counter and start at
-A1 and B1.
+The main result is summarized in @maintbl-main. Note the table is
+numbered "Table 1" via the `maintbl` custom crossref kind (labels
+starting with `tbl-` share the same counter but emit warnings) — the
+appendix tables use separate counters and start at A1 and B1.
+
+::: {#maintbl-main}
 
 ```{r}
-#| label: tbl-main
-#| tbl-cap: "Main results — effect of policy X on income"
 modelsummary(
   list("Baseline" = baseline, "+ Controls" = controls),
   coef_map = c("treat" = "Policy X", "age" = "Age", "educ" = "Education"),
@@ -129,8 +144,18 @@ modelsummary(
   fmt = 3, stars = c("*" = 0.1, "**" = 0.05, "***" = 0.01),
   output = "kableExtra"
 ) |>
-  kable_styling(latex_options = "HOLD_position", position = "center", font_size = 9)
+  kable_styling(position = "left", font_size = 9) |>
+  bare_tabular()
 ```
+
+Main results — effect of policy X on income
+
+:::
+
+::: {.tblnotes}
+*Notes:* OLS estimates on the simulated demo sample. Standard errors
+in parentheses; `*` p < 0.1, `**` p < 0.05, `***` p < 0.01.
+:::
 
 The headline point estimate of
 $\hat{\beta} = `r round(coef(baseline)["treat"], 2)`$ corresponds to
